@@ -1,0 +1,19 @@
+# Environments
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# Local Database & Large Models
+backend/chroma_db/
+backend/models/
+models/
+
+# OS files
+Thumbs.db
+.vscode/

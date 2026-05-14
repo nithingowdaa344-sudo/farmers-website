@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-outfit: "Outfit", sans-serif;
+  
+  --color-primary-50: #f0f9f1;
+  --color-primary-100: #dcf1e0;
+  --color-primary-200: #bce2c4;
+  --color-primary-300: #8fcc9f;
+  --color-primary-400: #5eaa75;
+  --color-primary-500: #3e8e56;
+  --color-primary-600: #2e7144;
+  --color-primary-700: #265a39;
+  --color-primary-800: #20482f;
+  --color-primary-900: #1c3c29;
+  --color-primary-950: #0f2117;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f8fafc] text-slate-900 font-outfit min-h-screen;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
+  }
+  
+  .glass-button {
+    @apply px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-primary-500/30 flex items-center gap-2;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-600 hover:bg-primary-50 hover:text-primary-600 cursor-pointer;
+  }
+
+  .nav-item.active {
+    @apply bg-primary-600 text-white shadow-lg shadow-primary-600/30;
+  }
+}
+
+/* Custom Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
