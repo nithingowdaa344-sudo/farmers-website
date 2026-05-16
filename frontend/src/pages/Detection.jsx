@@ -41,7 +41,13 @@ const Detection = ({ t }) => {
       });
       setResult(res.data);
     } catch (err) {
-      setError(err.response?.data?.error || "Error connecting to AI backend. Ensure Flask server is running.");
+      console.error(err);
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      if (API_BASE.includes('localhost') && window.location.hostname !== 'localhost') {
+        setError("Configuration Error: The live site is trying to connect to 'localhost'. Please set VITE_API_URL in Vercel settings and REDEPLOY.");
+      } else {
+        setError(err.response?.data?.error || "Error connecting to AI backend. Ensure your local server and tunnel (ngrok) are running.");
+      }
     } finally {
       setLoading(false);
     }
