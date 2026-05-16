@@ -1,19 +1,35 @@
 import React from 'react';
 import { Search, Bell, User } from 'lucide-react';
 
-const Navbar = () => {
+const Navbar = ({ language, setLanguage, t }) => {
   return (
     <div className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
       <div className="relative w-96">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input 
           type="text" 
-          placeholder="Search for diseases, crops, or treatments..."
+          placeholder={t.searchPlaceholder}
           className="w-full pl-11 pr-4 py-2.5 bg-slate-100 border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 rounded-xl transition-all outline-none text-sm"
         />
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Language Switcher */}
+        <div className="flex bg-slate-100 p-1 rounded-xl">
+          <button 
+            onClick={() => setLanguage('en')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${language === 'en' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            EN
+          </button>
+          <button 
+            onClick={() => setLanguage('kn')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${language === 'kn' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            ಕನ್ನಡ
+          </button>
+        </div>
+
         <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors relative">
           <Bell size={20} />
           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
@@ -24,7 +40,7 @@ const Navbar = () => {
         <div className="flex items-center gap-3 pl-2">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-slate-800">Bharath</p>
-            <p className="text-xs text-slate-500">Premium Farmer</p>
+            <p className="text-xs text-slate-500">{t.premiumFarmer}</p>
           </div>
           <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold border-2 border-white shadow-sm">
             B

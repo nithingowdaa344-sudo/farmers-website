@@ -25,7 +25,7 @@ const StatCard = ({ icon: Icon, label, value, trend, color }) => (
   </motion.div>
 );
 
-const Dashboard = () => {
+const Dashboard = ({ t }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,35 +59,35 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <header>
-        <h1 className="text-3xl font-bold text-slate-900">Crop Health Overview 🌾</h1>
-        <p className="text-slate-500 mt-1">Real-time statistics based on your latest AI diagnostic scans.</p>
+        <h1 className="text-3xl font-bold text-slate-900">{t.cropHealthOverview}</h1>
+        <p className="text-slate-500 mt-1">{t.statsSubtitle}</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           icon={Leaf} 
-          label="Total Scans" 
+          label={t.totalScans} 
           value={totalScans} 
           trend={totalScans > 0 ? "+1" : null}
           color="bg-primary-600" 
         />
         <StatCard 
           icon={CheckCircle2} 
-          label="Overall Health" 
+          label={t.overallHealth} 
           value={`${healthRate}%`} 
-          trend={totalScans > 0 ? "Normal" : null}
+          trend={totalScans > 0 ? t.low : null}
           color="bg-green-500" 
         />
         <StatCard 
           icon={AlertTriangle} 
-          label="Issues Found" 
+          label={t.issuesFound} 
           value={diseasesDetected} 
-          trend={diseasesDetected > 0 ? "Action Required" : "None"} 
+          trend={diseasesDetected > 0 ? t.actionRequired : t.none} 
           color="bg-amber-500" 
         />
         <StatCard 
           icon={Clock} 
-          label="Latest Activity" 
+          label={t.latestActivity} 
           value={totalScans > 0 ? history[0].timestamp.split(' ')[1] : "N/A"} 
           color="bg-blue-500" 
         />
@@ -95,7 +95,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 glass-card p-8">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Recent Diagnostic Activity</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-6">{t.recentActivity}</h3>
           <div className="space-y-6">
             {history.length > 0 ? (
               history.slice(0, 5).map((item, i) => (
@@ -105,10 +105,10 @@ const Dashboard = () => {
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-slate-800 text-sm">{item.disease}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Detected with {item.confidence} confidence • {item.timestamp}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{t.confidence} {item.confidence} • {item.timestamp}</p>
                   </div>
                   <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${item.disease.toLowerCase().includes('healthy') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                    {item.disease.toLowerCase().includes('healthy') ? 'Healthy' : 'Diseased'}
+                    {item.disease.toLowerCase().includes('healthy') ? t.healthy : t.diseased}
                   </span>
                 </div>
               ))
@@ -117,7 +117,7 @@ const Dashboard = () => {
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Leaf className="text-slate-300" size={32} />
                 </div>
-                <p className="text-slate-400 font-medium">No activity yet. Start by scanning a leaf!</p>
+                <p className="text-slate-400 font-medium">{t.noActivity}</p>
               </div>
             )}
           </div>
@@ -125,19 +125,19 @@ const Dashboard = () => {
 
         <div className="glass-card p-8 bg-primary-900 text-white overflow-hidden relative">
           <div className="relative z-10">
-            <h3 className="text-lg font-bold mb-2">Smart Recommendation</h3>
+            <h3 className="text-lg font-bold mb-2">{t.recommendation}</h3>
             <p className="text-primary-200 text-sm mb-8">
               {diseasesDetected > 0 
-                ? "We detected some issues. Check the remedies suggested by AI to prevent spread."
-                : "Your crops are looking great! Maintain regular watering and check for early signs of pests."
+                ? t.issueTip
+                : t.healthyTip
               }
             </p>
             
             <div className="space-y-4">
               <div className="flex justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-sm">
-                <span className="text-sm font-medium">Risk Level</span>
+                <span className="text-sm font-medium">{t.riskLevel}</span>
                 <span className={`text-xl font-bold ${diseasesDetected > 2 ? 'text-red-400' : 'text-green-400'}`}>
-                  {diseasesDetected > 2 ? 'High' : 'Low'}
+                  {diseasesDetected > 2 ? t.high : t.low}
                 </span>
               </div>
               <div className="flex justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-sm">

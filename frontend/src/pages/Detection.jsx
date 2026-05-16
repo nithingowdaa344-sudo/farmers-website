@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, ShieldAlert, Sparkles, Volume2, CheckCircle2, ChevronRight, Loader2 } from 'lucide-react';
+import { Upload, X, ShieldAlert, Sparkles, Volume2, VolumeX, CheckCircle2, ChevronRight, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
-const Detection = () => {
+const Detection = ({ t }) => {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFile = (file) => {
@@ -44,9 +45,20 @@ const Detection = () => {
     }
   };
 
-  const speak = (text) => {
+  const toggleSpeak = (text) => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
 
@@ -55,16 +67,16 @@ const Detection = () => {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-            AI Disease Diagnosis <Sparkles className="text-primary-600 w-6 h-6" />
+            {t.aiDiagnosis} <Sparkles className="text-primary-600 w-6 h-6" />
           </h1>
-          <p className="text-slate-500 mt-1">Upload a clear photo of the plant leaf for instant AI analysis.</p>
+          <p className="text-slate-500 mt-1">{t.uploadInstruction}</p>
         </div>
         {preview && !loading && !result && (
           <button 
             onClick={handleUpload}
             className="glass-button bg-primary-600 hover:bg-primary-700"
           >
-            Start Analysis
+            {t.startAnalysis}
           </button>
         )}
       </header>
@@ -153,41 +165,120 @@ const Detection = () => {
                 key="result"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="space-y-6"
+                className="space-y-6 pb-12"
               >
+                {/* Status & Confidence Card */}
                 <div className="glass-card p-6 border-l-4 border-l-primary-600">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary-600 mb-1 block">Diagnosis Result</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary-600 mb-1 block">Primary Diagnosis</span>
                       <h2 className="text-2xl font-bold text-slate-900">{result.disease}</h2>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500 mb-1 font-medium">Confidence</p>
-                      <span className="text-2xl font-black text-primary-600">{result.confidence}</span>
+                    <div className="text-left md:text-right w-full md:w-auto">
+                      <p className="text-xs text-slate-500 mb-2 font-medium">{t.confidence}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 md:w-32 bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: result.confidence }}
+                            className={`h-full ${parseInt(result.confidence) > 85 ? 'bg-green-500' : 'bg-amber-500'}`}
+                          />
+                        </div>
+                        <span className="text-xl font-black text-slate-800">{result.confidence}</span>
+                      </div>
                     </div>
                   </div>
+
+                  {parseInt(result.confidence) < 85 && (
+                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-100 mb-4">
+                      <ShieldAlert size={14} />
+                      Warning: Confidence is moderate. Prediction may be slightly inaccurate.
+                    </div>
+                  )}
                   
-                  <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
-                    <CheckCircle2 size={16} className="text-green-500" />
-                    AI analysis completed successfully.
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Detected Plant</p>
+                      <p className="font-bold text-slate-700 flex items-center gap-2 capitalize">
+                        <CheckCircle2 size={14} className="text-primary-500" /> {result.plant}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Category</p>
+                      <p className="font-bold text-slate-700 flex items-center gap-2">
+                        <Sparkles size={14} className="text-amber-500" /> {result.disease.includes('Healthy') ? 'Crop Health' : 'Pathogen Alert'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="glass-card p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      <Sparkles className="text-amber-500" size={20} /> AI Insights & Advice
+                {/* Top 3 Predictions */}
+                {result.top_3 && result.top_3.length > 0 && (
+                  <div className="glass-card p-6">
+                    <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <ChevronRight size={16} className="text-primary-500" /> Alternative Possibilities
                     </h3>
-                    <button 
-                      onClick={() => speak(result.advice)}
-                      className="p-2 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
-                    >
-                      <Volume2 size={18} /> Listen
-                    </button>
+                    <div className="space-y-3">
+                      {result.top_3.map((alt, idx) => (
+                        <div key={idx} className="flex items-center justify-between group cursor-default">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 text-[10px] font-bold flex items-center justify-center text-slate-500 group-hover:bg-primary-50 group-hover:text-primary-600 transition-colors">
+                              {idx + 1}
+                            </div>
+                            <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">{alt.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="bg-slate-300 h-full" style={{ width: `${alt.prob}%` }} />
+                            </div>
+                            <span className="text-xs font-mono text-slate-400">{alt.prob}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Content Sections */}
+                <div className="space-y-4">
+                  <div className="glass-card overflow-hidden">
+                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-100 flex justify-between items-center">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <ShieldAlert size={18} className="text-red-500" /> Symptoms Observed
+                      </h3>
+                    </div>
+                    <div className="p-6 text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                      {result.symptoms}
+                    </div>
                   </div>
 
-                  <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed space-y-4">
-                    <div className="whitespace-pre-wrap">{result.advice}</div>
+                  <div className="glass-card overflow-hidden">
+                    <div className="bg-primary-50/50 px-6 py-3 border-b border-primary-100 flex justify-between items-center">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <Sparkles size={18} className="text-amber-500" /> AI Remedies & Steps
+                      </h3>
+                      <button 
+                        onClick={() => toggleSpeak(`${result.advice}. Fertilizer Advice: ${result.fertilizer}`)}
+                        className={`p-1.5 rounded-lg transition-all flex items-center gap-2 text-xs font-bold ${isSpeaking ? 'bg-red-500 text-white shadow-lg shadow-red-200' : 'bg-white text-primary-600 border border-primary-200 hover:border-primary-400'}`}
+                      >
+                        {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                        {isSpeaking ? t.stop : t.listen}
+                      </button>
+                    </div>
+                    <div className="p-6 text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                      {result.advice}
+                    </div>
+                  </div>
+
+                  <div className="glass-card overflow-hidden">
+                    <div className="bg-green-50 px-6 py-3 border-b border-green-100">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <CheckCircle2 size={18} className="text-green-500" /> Fertilizer & Nutrient Advice
+                      </h3>
+                    </div>
+                    <div className="p-6 text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                      {result.fertilizer}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -196,8 +287,8 @@ const Detection = () => {
                 <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mb-4">
                   <Sparkles size={32} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-400">Result will appear here</h3>
-                <p className="text-sm text-slate-400 mt-2 max-w-xs">Once you upload and analyze an image, the AI detection details will populate this area.</p>
+                <h3 className="text-lg font-bold text-slate-400">{t.resultPlaceholder}</h3>
+                <p className="text-sm text-slate-400 mt-2 max-w-xs">{t.resultDescription}</p>
               </div>
             )}
           </AnimatePresence>

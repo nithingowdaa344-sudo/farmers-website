@@ -17,3 +17,9 @@ models/
 # OS files
 Thumbs.db
 .vscode/
+
+# Temporary Files & Uploads
+backend/temp_*.jpg
+backend/uploads/
+backend/*.h5
+backend/*.pkl

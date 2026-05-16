@@ -3,18 +3,25 @@ import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Detection from './pages/Detection';
+import VoiceAssistant from './pages/VoiceAssistant';
 import ChatBot from './components/ChatBot';
 import { motion, AnimatePresence } from 'framer-motion';
+import { translations } from './translations';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [language, setLanguage] = useState('en');
+
+  const t = translations[language];
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard t={t} />;
       case 'detection':
-        return <Detection />;
+        return <Detection t={t} />;
+      case 'voice':
+        return <VoiceAssistant t={t} />;
       case 'history':
         return (
           <div className="glass-card p-12 text-center">
@@ -29,10 +36,10 @@ function App() {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc]">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
       
       <div className="flex-1 flex flex-col min-w-0">
-        <Navbar />
+        <Navbar language={language} setLanguage={setLanguage} t={t} />
         
         <main className="flex-1 p-8 overflow-y-auto">
           <AnimatePresence mode="wait">
@@ -49,7 +56,7 @@ function App() {
         </main>
       </div>
 
-      <ChatBot />
+      <ChatBot t={t} />
     </div>
   );
 }

@@ -13,34 +13,7 @@ CHROMA_PATH = os.path.join(os.path.dirname(__file__), "chroma_db")
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 collection = chroma_client.get_or_create_collection(name="agri_knowledge")
 
-# PlantVillage Classes (Standard 38 classes)
-CLASS_NAMES = [
-    'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
-    'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Cherry_(including_sour)___healthy',
-    'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot', 'Corn_(maize)___Common_rust_',
-    'Corn_(maize)___Northern_Leaf_Blight', 'Corn_(maize)___healthy', 'Grape___Black_rot',
-    'Grape___Esca_(Black_Measles)', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 'Grape___healthy',
-    'Orange___Haunglongbing_(Citrus_greening)', 'Peach___Bacterial_spot', 'Peach___healthy',
-    'Pepper,_bell___Bacterial_spot', 'Pepper,_bell___healthy', 'Potato___Early_blight',
-    'Potato___Late_blight', 'Potato___healthy', 'Raspberry___healthy', 'Soybean___healthy',
-    'Squash___Powdery_mildew', 'Strawberry___Leaf_scorch', 'Strawberry___healthy',
-    'Tomato___Bacterial_spot', 'Tomato___Early_blight', 'Tomato___Late_blight', 'Tomato___Leaf_Mold',
-    'Tomato___Septoria_leaf_spot', 'Tomato___Spider_mites Two-spotted_spider_mite',
-    'Tomato___Target_Spot', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Tomato___Tomato_mosaic_virus',
-    'Tomato___healthy'
-]
 
-def preprocess_image(image_path):
-    """
-    Load and preprocess the image for MobileNetV2.
-    Ensures image is in RGB mode (3 channels).
-    """
-    img = Image.open(image_path).convert('RGB')
-    img = img.resize((224, 224))
-    img_array = np.array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0
-    return img_array
 
 def get_ai_explanation(disease_name):
     """
@@ -61,7 +34,12 @@ def get_ai_explanation(disease_name):
         payload = {
             "model": "llama3",
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            "options": {
+                "num_predict": 300,
+                "temperature": 0.5,
+                "top_k": 20
+            }
         }
         response = requests.post(url, json=payload)
         if response.status_code == 200:
@@ -70,6 +48,73 @@ def get_ai_explanation(disease_name):
         return f"AI was unable to generate an explanation. Status Code: {response.status_code}"
     except Exception as e:
         return f"AI Insight Error: {str(e)}"
+
+import base64
+from io import BytesIO
+
+def get_ollama_vision_analysis(image_path):
+    """
+    Use Ollama (Llama 3.2 Vision) to identify the plant and disease from an image.
+    100% Local processing as requested.
+    """
+    try:
+        # Convert image to base64 for Ollama
+        with Image.open(image_path) as img:
+            # Ensure image is in RGB mode (fixes RGBA as JPEG error)
+            img = img.convert('RGB')
+            # Resize for efficiency
+            img.thumbnail((512, 512))
+            buffered = BytesIO()
+            img.save(buffered, format="JPEG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+        prompt = """
+        You are an expert agriculture disease detection AI. 
+        
+        STEP 1: Identify the crop type (e.g., strawberry, tomato, potato, corn, grape, pepper, apple, mango, coffee, ragi, paddy).
+        STEP 2: Identify the disease only related to that crop. NEVER predict tomato diseases for strawberry.
+        STEP 3: Validate image quality.
+        
+        RETURN ONLY A JSON OBJECT:
+        {
+          "plant": "Plant Name",
+          "disease": "Disease Name",
+          "confidence": 95,
+          "top_3": [
+            {"name": "Prediction 1", "prob": 95},
+            {"name": "Prediction 2", "prob": 4},
+            {"name": "Prediction 3", "prob": 1}
+          ],
+          "symptoms": "Visual symptoms...",
+          "advice": "Remedies...",
+          "fertilizer": "Fertilizer advice"
+        }
+        """
+
+        url = "http://localhost:11434/api/generate"
+        payload = {
+            "model": "moondream",
+            "prompt": prompt,
+            "images": [img_base64],
+            "stream": False,
+            "format": "json"
+        }
+        
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            data = response.json()
+            result = json.loads(data.get("response", "{}"))
+            
+            # Confidence check
+            conf = int(str(result.get('confidence', 0)).replace('%', ''))
+            if conf < 70:
+                return None, "Unable to confidently identify disease. Please upload a clearer image."
+                
+            return result, None
+            
+        return None, f"Ollama Error: Status {response.status_code}"
+    except Exception as e:
+        return None, f"Ollama Vision Error: {str(e)}"
 
 from deep_translator import GoogleTranslator
 from langdetect import detect
@@ -129,7 +174,13 @@ def get_chat_response(user_message, chat_history=[]):
         payload = {
             "model": "llama3",
             "prompt": full_prompt,
-            "stream": False
+            "stream": False,
+            "options": {
+                "num_predict": 250,
+                "temperature": 0.4,
+                "top_k": 30,
+                "num_ctx": 1024
+            }
         }
         
         # 4. Get response from local LLM

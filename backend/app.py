@@ -1,25 +1,17 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import tensorflow as tf
 import os
-from utils import preprocess_image, get_ai_explanation, CLASS_NAMES, get_chat_response
+from utils import get_ai_explanation, get_chat_response, get_ollama_vision_analysis
 import json
 from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-# Load the model
-MODEL_PATH = 'crop_disease_model.h5'
-model = None
+# In-memory history
+history = []
 
-if os.path.exists(MODEL_PATH):
-    model = tf.keras.models.load_model(MODEL_PATH)
-    print("Model loaded successfully.")
-else:
-    print("Warning: Model file not found. Run train.py first.")
-
-# In-memory history for demo purposes
+# In-memory history
 history = []
 
 @app.route('/health', methods=['GET'])
@@ -28,45 +20,38 @@ def health():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if model is None:
-        return jsonify({"error": "Model not loaded. Please train the model first."}), 500
-
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
     import uuid
-    # Save temp file
     temp_path = f"temp_{uuid.uuid4().hex}.jpg"
     file.save(temp_path)
 
     try:
-        # Preprocess and Predict
-        img_array = preprocess_image(temp_path)
-        predictions = model.predict(img_array)
+        # 1. Use Local Ollama Vision (Llama 3.2) - 100% Private
+        ollama_result, error = get_ollama_vision_analysis(temp_path)
         
-        # Get result details
-        class_idx = tf.argmax(predictions[0]).numpy()
-        confidence = float(predictions[0][class_idx])
-        disease_name = CLASS_NAMES[class_idx]
+        if error:
+            return jsonify({"error": error}), 400
 
-        # Get AI Advice from Gemini
-        ai_advice = get_ai_explanation(disease_name)
-
-        result = {
-            "disease": disease_name.replace("___", " ").replace("_", " "),
-            "confidence": f"{confidence * 100:.2f}%",
-            "advice": ai_advice,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-        # Add to history
-        history.append(result)
-
-        return jsonify(result), 200
+        if ollama_result:
+            conf = int(str(ollama_result.get('confidence', 0)).replace('%', ''))
+            
+            result = {
+                "plant": ollama_result.get('plant', 'Unknown'),
+                "disease": ollama_result['disease'],
+                "confidence": f"{conf}%",
+                "top_3": ollama_result.get('top_3', []),
+                "symptoms": ollama_result.get('symptoms', 'No symptoms provided.'),
+                "advice": ollama_result['advice'],
+                "fertilizer": ollama_result.get('fertilizer', 'General fertilizer advice not available.'),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            history.append(result)
+            return jsonify(result), 200
+        
+        return jsonify({"error": "Ollama vision analysis failed."}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

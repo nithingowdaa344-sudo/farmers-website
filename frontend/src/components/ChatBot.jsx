@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, User, Bot, Loader2, Minus, Volume2, VolumeX } from 'lucide-react';
+import { MessageSquare, X, Send, User, Bot, Loader2, Minus, Volume2, VolumeX, Mic, MicOff } from 'lucide-react';
 import axios from 'axios';
 
-const ChatBot = () => {
+const ChatBot = ({ t }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [message, setMessage] = useState('');
@@ -12,7 +12,36 @@ const ChatBot = () => {
   ]);
   const [loading, setLoading] = useState(false);
   const [playingIndex, setPlayingIndex] = useState(null);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = 'kn-IN'; // Default to Kannada, but will pick up English too
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onstart = () => setIsListening(true);
+      recognitionRef.current.onend = () => setIsListening(false);
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setMessage(transcript);
+        // Optional: auto-send
+        // handleSend(null, transcript); 
+      };
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,7 +94,7 @@ const ChatBot = () => {
       const res = await axios.post('http://localhost:5000/chat', { message });
       setChat(prev => [...prev, { role: 'ai', content: res.data.response }]);
     } catch (err) {
-      setChat(prev => [...prev, { role: 'ai', content: "Sorry, I'm having trouble connecting. Please check if the backend is running." }]);
+      setChat(prev => [...prev, { role: 'ai', content: t.errorMessage }]);
     } finally {
       setLoading(false);
     }
@@ -90,7 +119,7 @@ const ChatBot = () => {
                 <div>
                   <h3 className="font-bold text-sm">KrishiNova Assistant</h3>
                   <p className="text-[10px] text-primary-100 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> {t.online}
                   </p>
                 </div>
               </div>
@@ -135,7 +164,7 @@ const ChatBot = () => {
                 <div className="flex justify-start">
                   <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 flex items-center gap-2">
                     <Loader2 size={16} className="animate-spin text-primary-600" />
-                    <span className="text-xs text-slate-500">Assistant is thinking...</span>
+                    <span className="text-xs text-slate-500">{t.thinking}</span>
                   </div>
                 </div>
               )}
@@ -144,11 +173,19 @@ const ChatBot = () => {
 
             {/* Input Area */}
             <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-100 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                title={isListening ? "Stop listening" : "Start voice input"}
+              >
+                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              </button>
               <input 
                 type="text" 
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Ask about crops, soil, pests..."
+                placeholder={isListening ? t.listening : t.searchPlaceholder}
                 className="flex-1 bg-slate-100 border-none focus:ring-2 focus:ring-primary-500/20 rounded-xl px-4 py-2 text-sm outline-none transition-all"
               />
               <button 
@@ -176,7 +213,7 @@ const ChatBot = () => {
           )}
         </div>
         {(!isOpen || isMinimized) && (
-          <span className="font-bold text-sm pr-2">Chat with Expert AI</span>
+          <span className="font-bold text-sm pr-2">{t.chatWithExpert}</span>
         )}
       </motion.button>
     </div>

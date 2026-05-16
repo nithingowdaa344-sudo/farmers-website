@@ -1,11 +1,12 @@
 import React from 'react';
-import { LayoutDashboard, Camera, History, Settings, HelpCircle, Leaf } from 'lucide-react';
+import { LayoutDashboard, Camera, History, Settings, HelpCircle, Leaf, Mic } from 'lucide-react';
 
-const Sidebar = ({ activeTab, setActiveTab }) => {
+const Sidebar = ({ activeTab, setActiveTab, t }) => {
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'detection', icon: Camera, label: 'Disease Detection' },
-    { id: 'history', icon: History, label: 'History' },
+    { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
+    { id: 'detection', icon: Camera, label: t.detection },
+    { id: 'voice', icon: Mic, label: t.voiceAssistant },
+    { id: 'history', icon: History, label: t.history },
   ];
 
   return (
@@ -33,11 +34,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       <div className="p-4 border-t border-slate-100">
         <button className="nav-item w-full">
           <Settings size={20} />
-          <span className="font-medium">Settings</span>
+          <span className="font-medium">{t.settings}</span>
         </button>
         <button className="nav-item w-full mt-2">
           <HelpCircle size={20} />
-          <span className="font-medium">Help Center</span>
+          <span className="font-medium">{t.helpCenter}</span>
         </button>
       </div>
     </div>
