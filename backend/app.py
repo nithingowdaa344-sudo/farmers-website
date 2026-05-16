@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pymongo import MongoClient
 import os
 from utils import get_ai_explanation, get_chat_response, get_ollama_vision_analysis, get_gemini_vision_analysis
 import json
@@ -8,8 +9,11 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# In-memory history
-history = []
+# MongoDB Setup
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+client = MongoClient(MONGO_URI)
+db = client['krishinova_db']
+history_collection = db['detection_history']
 
 @app.route('/', methods=['GET'])
 def home():
@@ -55,7 +59,12 @@ def predict():
                 "fertilizer": ai_result.get('fertilizer', 'General fertilizer advice not available.'),
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
-            history.append(result)
+            # Save to MongoDB
+            history_collection.insert_one(result.copy())
+            
+            # Clean result for JSON (MongoDB adds _id object)
+            if '_id' in result: del result['_id']
+            
             return jsonify(result), 200
         
         return jsonify({"error": "All AI models failed to process the image."}), 500
@@ -68,7 +77,9 @@ def predict():
 
 @app.route('/history', methods=['GET'])
 def get_history():
-    return jsonify(history), 200
+    # Fetch latest 20 scans from MongoDB
+    scans = list(history_collection.find({}, {'_id': 0}).sort('timestamp', -1).limit(20))
+    return jsonify(scans), 200
 
 @app.route('/chat', methods=['POST'])
 def chat():

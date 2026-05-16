@@ -7,3 +7,5 @@ deep-translator
 langdetect
 chromadb
 google-generativeai
+pymongo
+dnspython

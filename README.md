@@ -38,9 +38,9 @@ A state-of-the-art, AI-powered agricultural application designed to help farmers
    pip install -r requirements.txt
    ```
 4. Set up environment variables:
-   - Create a `.env` file in the `backend/` folder.
-   - Add your Ollama Public URL (if using ngrok for live site): `OLLAMA_URL=https://your-ngrok-url.ngrok-free.app`.
-   - If testing locally, keep it as: `OLLAMA_URL=http://localhost:11434`.
+    - Add your Ollama Public URL (if using ngrok for live site): `OLLAMA_URL=https://your-ngrok-url.ngrok-free.app`.
+    - Add your MongoDB URI: `MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/database`.
+    - If testing locally, keep it as: `OLLAMA_URL=http://localhost:11434` and `MONGO_URI=mongodb://localhost:27017/`.
    - Add your Gemini API Key: `GEMINI_API_KEY=your_actual_key_here`.
 
 ### 🚨 Live Deployment (Ollama on Vercel)
