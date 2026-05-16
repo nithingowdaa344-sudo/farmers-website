@@ -36,15 +36,16 @@ def predict():
             return jsonify({"error": error}), 400
 
         if ollama_result:
-            conf = int(str(ollama_result.get('confidence', 0)).replace('%', ''))
+            conf_str = str(ollama_result.get('confidence', 0)).replace('%', '')
+            conf = int(float(conf_str))
             
             result = {
                 "plant": ollama_result.get('plant', 'Unknown'),
-                "disease": ollama_result['disease'],
+                "disease": ollama_result.get('disease', 'Unknown Condition'),
                 "confidence": f"{conf}%",
                 "top_3": ollama_result.get('top_3', []),
                 "symptoms": ollama_result.get('symptoms', 'No symptoms provided.'),
-                "advice": ollama_result['advice'],
+                "advice": ollama_result.get('advice', 'No treatment advice provided.'),
                 "fertilizer": ollama_result.get('fertilizer', 'General fertilizer advice not available.'),
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }

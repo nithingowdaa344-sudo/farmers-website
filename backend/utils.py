@@ -71,11 +71,12 @@ def get_ollama_vision_analysis(image_path):
         prompt = """
         You are an expert agriculture disease detection AI. 
         
-        STEP 1: Identify the crop type (e.g., strawberry, tomato, potato, corn, grape, pepper, apple, mango, coffee, ragi, paddy).
-        STEP 2: Identify the disease only related to that crop. NEVER predict tomato diseases for strawberry.
-        STEP 3: Validate image quality.
+        INSTRUCTIONS:
+        1. Identify the crop type (e.g., strawberry, tomato, potato, corn, grape, pepper, apple, mango, coffee, ragi, paddy).
+        2. Identify the specific disease. NEVER predict tomato diseases for strawberry.
+        3. Provide detailed symptoms, treatment advice, and fertilizer recommendations.
         
-        RETURN ONLY A JSON OBJECT:
+        STRICT REQUIREMENT: You MUST return a JSON object with ALL of these keys:
         {
           "plant": "Plant Name",
           "disease": "Disease Name",
@@ -85,9 +86,9 @@ def get_ollama_vision_analysis(image_path):
             {"name": "Prediction 2", "prob": 4},
             {"name": "Prediction 3", "prob": 1}
           ],
-          "symptoms": "Visual symptoms...",
-          "advice": "Remedies...",
-          "fertilizer": "Fertilizer advice"
+          "symptoms": "Detailed visual symptoms...",
+          "advice": "Step-by-step remedies...",
+          "fertilizer": "Specific fertilizer and nutrient advice"
         }
         """
 
@@ -105,8 +106,9 @@ def get_ollama_vision_analysis(image_path):
             data = response.json()
             result = json.loads(data.get("response", "{}"))
             
-            # Confidence check
-            conf = int(str(result.get('confidence', 0)).replace('%', ''))
+            # Confidence check (Handle float strings like '95.0')
+            conf_str = str(result.get('confidence', 0)).replace('%', '')
+            conf = int(float(conf_str))
             if conf < 70:
                 return None, "Unable to confidently identify disease. Please upload a clearer image."
                 
