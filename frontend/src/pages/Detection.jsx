@@ -34,7 +34,8 @@ const Detection = ({ t }) => {
     formData.append('file', image);
 
     try {
-      const res = await axios.post('http://localhost:5000/predict', formData, {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await axios.post(`${API_BASE}/predict`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setResult(res.data);

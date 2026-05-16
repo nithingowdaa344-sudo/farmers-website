@@ -59,6 +59,16 @@ Since Ollama is local, you must expose it for the live Vercel site to work:
    python app.py
    ```
 
+### 🚨 Live Deployment (Vercel)
+1. **Frontend**: Set the Root Directory to `frontend`.
+2. **Environment Variables**: Add `VITE_API_URL=https://your-backend-ngrok-url.ngrok-free.app`.
+3. **Backend Tunnel**: Run `npx ngrok http 5000` to expose your Flask server.
+
+### 🚨 Local AI Tunnel (ngrok)
+If you are using Ollama on your local machine while the site is live:
+1. Run `npx ngrok http 11434` for Ollama.
+2. Update `OLLAMA_URL` in your backend `.env`.
+
 ### 2. Frontend Setup
 1. Navigate to the frontend directory:
    ```bash
