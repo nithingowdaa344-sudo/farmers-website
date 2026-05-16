@@ -1,9 +1,10 @@
 flask
 flask-cors
-tensorflow
 pillow
 requests
 python-dotenv
 deep-translator
 langdetect
 chromadb
+google-generativeai
+gunicorn

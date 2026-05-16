@@ -64,10 +64,18 @@ Since Ollama is local, you must expose it for the live Vercel site to work:
 2. **Environment Variables**: Add `VITE_API_URL=https://your-backend-ngrok-url.ngrok-free.app`.
 3. **Backend Tunnel**: Run `npx ngrok http 5000` to expose your Flask server.
 
-### 🚨 Local AI Tunnel (ngrok)
-If you are using Ollama on your local machine while the site is live:
-1. Run `npx ngrok http 11434` for Ollama.
-2. Update `OLLAMA_URL` in your backend `.env`.
+### 🚨 Production Deployment (Render)
+To make your backend work 24/7:
+1. Create a new **Web Service** on [Render](https://render.com).
+2. Connect your GitHub repo.
+3. **Root Directory**: `backend`
+4. **Build Command**: `pip install -r requirements.txt`
+5. **Start Command**: `gunicorn app:app`
+6. **Environment Variables**: 
+   - `GEMINI_API_KEY`: Your Google Gemini API Key.
+   - `PORT`: 5000
+
+Once live, copy the Render URL (e.g., `https://agri-backend.onrender.com`) and put it into Vercel's `VITE_API_URL`.
 
 ### 2. Frontend Setup
 1. Navigate to the frontend directory:
