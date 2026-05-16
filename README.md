@@ -39,7 +39,17 @@ A state-of-the-art, AI-powered agricultural application designed to help farmers
    ```
 4. Set up environment variables:
    - Create a `.env` file in the `backend/` folder.
+   - Add your Ollama Public URL (if using ngrok for live site): `OLLAMA_URL=https://your-ngrok-url.ngrok-free.app`.
+   - If testing locally, keep it as: `OLLAMA_URL=http://localhost:11434`.
    - Add your Gemini API Key: `GEMINI_API_KEY=your_actual_key_here`.
+
+### 🚨 Live Deployment (Ollama on Vercel)
+Since Ollama is local, you must expose it for the live Vercel site to work:
+1. Run `npx ngrok http 11434` in your terminal.
+2. Copy the `https://...` URL provided by ngrok.
+3. Update your `.env` file or Vercel Environment Variables with `OLLAMA_URL=your_ngrok_url`.
+4. Ensure your Ollama host is set to listen externally: `$env:OLLAMA_HOST="0.0.0.0"; ollama serve`.
+
 5. Train the model (or generate dummy for UI testing):
    ```bash
    python train.py

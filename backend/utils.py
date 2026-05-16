@@ -7,6 +7,7 @@ from PIL import Image
 import chromadb
 
 load_dotenv()
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
 # Initialize ChromaDB
 CHROMA_PATH = os.path.join(os.path.dirname(__file__), "chroma_db")
@@ -30,7 +31,7 @@ def get_ai_explanation(disease_name):
     """
     
     try:
-        url = "http://localhost:11434/api/generate"
+        url = f"{OLLAMA_URL}/api/generate"
         payload = {
             "model": "llama3",
             "prompt": prompt,
@@ -92,7 +93,7 @@ def get_ollama_vision_analysis(image_path):
         }
         """
 
-        url = "http://localhost:11434/api/generate"
+        url = f"{OLLAMA_URL}/api/generate"
         payload = {
             "model": "moondream",
             "prompt": prompt,
@@ -172,7 +173,7 @@ def get_chat_response(user_message, chat_history=[]):
         
         full_prompt = f"{system_context}\n\nUser asked: {english_message}"
         
-        url = "http://localhost:11434/api/generate"
+        url = f"{OLLAMA_URL}/api/generate"
         payload = {
             "model": "llama3",
             "prompt": full_prompt,
