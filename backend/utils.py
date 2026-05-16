@@ -5,8 +5,12 @@ from dotenv import load_dotenv
 import numpy as np
 from PIL import Image
 import chromadb
+import google.generativeai as genai
 
 load_dotenv()
+API_KEY = os.getenv("GEMINI_API_KEY")
+if API_KEY:
+    genai.configure(api_key=API_KEY)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
 # Initialize ChromaDB
@@ -52,6 +56,61 @@ def get_ai_explanation(disease_name):
 
 import base64
 from io import BytesIO
+
+def get_gemini_vision_analysis(image_path):
+    """
+    Use Gemini Vision (Cloud) to identify the plant and disease.
+    Highly accurate and works on live deployments.
+    """
+    if not API_KEY:
+        return None, "Gemini API Key missing."
+
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash-lite')
+        img = Image.open(image_path)
+        
+        # Optimize image for faster upload
+        if max(img.size) > 1024:
+            img.thumbnail((1024, 1024))
+        
+        prompt = """
+        You are an expert agriculture disease detection AI. 
+        
+        INSTRUCTIONS:
+        1. Identify the crop type (e.g., strawberry, tomato, potato, corn, grape, pepper, apple, mango, coffee, ragi, paddy).
+        2. Identify the specific disease. NEVER predict tomato diseases for strawberry.
+        3. Provide detailed symptoms, treatment advice, and fertilizer recommendations.
+        
+        STRICT REQUIREMENT: You MUST return a JSON object with ALL of these keys:
+        {
+          "plant": "Plant Name",
+          "disease": "Disease Name",
+          "confidence": 95,
+          "top_3": [
+            {"name": "Prediction 1", "prob": 95},
+            {"name": "Prediction 2", "prob": 4},
+            {"name": "Prediction 3", "prob": 1}
+          ],
+          "symptoms": "Detailed visual symptoms...",
+          "advice": "Step-by-step remedies...",
+          "fertilizer": "Specific fertilizer and nutrient advice"
+        }
+        """
+        
+        response = model.generate_content([prompt, img])
+        text = response.text.strip()
+        
+        # Robust JSON cleaning
+        if "{" in text and "}" in text:
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            json_str = text[start:end]
+            result = json.loads(json_str)
+            return result, None
+            
+        return None, "AI response was not in a readable format."
+    except Exception as e:
+        return None, f"Gemini Error: {str(e)}"
 
 def get_ollama_vision_analysis(image_path):
     """
