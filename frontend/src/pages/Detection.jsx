@@ -35,6 +35,7 @@ const Detection = ({ t }) => {
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log("Connecting to backend at:", API_BASE);
       const res = await axios.post(`${API_BASE}/predict`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });

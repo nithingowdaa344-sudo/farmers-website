@@ -7,4 +7,3 @@ deep-translator
 langdetect
 chromadb
 google-generativeai
-gunicorn

@@ -6,10 +6,14 @@ import json
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # In-memory history
 history = []
+
+@app.route('/', methods=['GET'])
+def home():
+    return "KrishiNova AI Backend is running!", 200
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -82,4 +86,4 @@ if __name__ == '__main__':
     if not os.path.exists('uploads'):
         os.makedirs('uploads')
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)
