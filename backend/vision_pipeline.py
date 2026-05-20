@@ -4,13 +4,14 @@ import uuid
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
-sys.path.insert(0, PROJECT_ROOT)
+
+if os.path.exists(PROJECT_ROOT):
+    sys.path.insert(0, PROJECT_ROOT)
 
 from utils.ai_services import get_gemini_vision_analysis
 
 class VisionPipeline:
     def __init__(self):
-        self.use_local_ml = False
         self.analyzer = None
 
     def run(self, image_path: str) -> dict:
@@ -20,25 +21,19 @@ class VisionPipeline:
         outputs_dir = os.path.join(BASE_DIR, "outputs")
         os.makedirs(outputs_dir, exist_ok=True)
 
-        # Try Gemini Vision API first (primary)
         result, error = get_gemini_vision_analysis(image_path)
 
         if result and not error:
-            print(f"[VisionPipeline] Gemini Vision success: {result.get('disease')}")
             result["model_used"] = "Gemini Vision"
             result["status"] = "success"
-            
-            # Map Gemini response to our schema
             return self._map_gemini_response(result, heatmap_id, outputs_dir)
-        
-        # Fallback to local YOLOv8 + EfficientNet
+
         print(f"[VisionPipeline] Gemini failed: {error}. Using local ML...")
         return self._run_local_ml(image_path, heatmap_id, outputs_dir)
 
     def _map_gemini_response(self, gemini_result: dict, heatmap_id: str, outputs_dir: str) -> dict:
         confidence = gemini_result.get("confidence", 0)
-        
-        # Determine severity based on confidence
+
         if "healthy" in gemini_result.get("disease", "").lower():
             severity = "None"
             infection_pct = 0
@@ -78,10 +73,9 @@ class VisionPipeline:
         }
 
     def _run_local_ml(self, image_path: str, heatmap_id: str, outputs_dir: str):
-        """Fallback to YOLOv8 + EfficientNet"""
         try:
             from ml_core.yolo_efficientnet_pipeline import YoloEfficientNetPipeline
-            
+
             yolo_path = os.path.join(PROJECT_ROOT, "models", "yolov8n.pt")
             efficientnet_path = os.path.join(PROJECT_ROOT, "models", "efficientnet_leaf_disease.pth")
             class_map_path = os.path.join(PROJECT_ROOT, "models", "class_indices.json")
@@ -94,20 +88,20 @@ class VisionPipeline:
 
             output_overlay_path = os.path.join(outputs_dir, f"heatmap_{heatmap_id}.png")
             self.analyzer.model = self.analyzer.classifier
-            
+
             from utils.heatmap_generator import create_heatmap_overlay
             create_heatmap_overlay(image_path, self.analyzer, output_overlay_path)
-            
+
             result = self.analyzer.analyze(image_path, output_overlay_path=None)
-            
+
             if os.path.exists(output_overlay_path):
                 result["heatmap_url"] = f"/outputs/heatmap_{heatmap_id}.png"
-            
+
             result["model_used"] = "YOLOv8 + EfficientNet (Fallback)"
             return result
-            
+
         except Exception as e:
-            print(f"[VisionPipeline] Local ML also failed: {e}")
+            print(f"[VisionPipeline] Local ML failed: {e}")
             return {
                 "status": "error",
                 "plant": "Unknown Plant",
@@ -115,7 +109,7 @@ class VisionPipeline:
                 "disease": "Unknown Disease",
                 "severity": "Unknown",
                 "confidence": 0,
-                "symptoms": "Analysis failed - please check API keys and try again.",
+                "symptoms": "Analysis failed. Check Gemini API key.",
                 "remedies": "Unable to generate advice.",
                 "fertilizer": "Unable to generate advice.",
                 "precautions": "Ensure Gemini API key is valid.",
