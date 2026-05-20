@@ -2,92 +2,127 @@ import os
 import sys
 import uuid
 
-# Add parent directory to sys.path to access ml_core
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from ml_core.yolo_efficientnet_pipeline import YoloEfficientNetPipeline
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
+sys.path.insert(0, PROJECT_ROOT)
+
+from utils.ai_services import get_gemini_vision_analysis
 
 class VisionPipeline:
     def __init__(self):
-        # Initialize the hybrid YOLOv8 + EfficientNet pipeline
-        # YOLOv8 weights are stored in the models folder in parent, or root
-        parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        yolo_path = os.path.join(parent_dir, "models", "yolov8n.pt")
-        efficientnet_path = os.path.join(parent_dir, "models", "efficientnet_leaf_disease.pth")
-        class_map_path = os.path.join(parent_dir, "models", "class_indices.json")
-        
-        self.analyzer = YoloEfficientNetPipeline(
-            yolo_model_path=yolo_path,
-            efficientnet_path=efficientnet_path,
-            class_map_path=class_map_path
-        )
+        self.use_local_ml = False
+        self.analyzer = None
 
     def run(self, image_path: str) -> dict:
-        """
-        Run the hybrid YOLOv8 + EfficientNet vision pipeline on a given image path.
-        Saves the OpenCV annotated bounding box image to the outputs directory.
-        """
-        print(f"[VisionPipeline] Running YOLOv8 + EfficientNet analysis on: {image_path}")
+        print(f"[VisionPipeline] Processing: {image_path}")
 
-        # Unique filename for the annotated overlay
         heatmap_id = uuid.uuid4().hex
-        os.makedirs("outputs", exist_ok=True)
-        output_overlay_path = f"outputs/heatmap_{heatmap_id}.png"
+        outputs_dir = os.path.join(BASE_DIR, "outputs")
+        os.makedirs(outputs_dir, exist_ok=True)
 
+        # Try Gemini Vision API first (primary)
+        result, error = get_gemini_vision_analysis(image_path)
+
+        if result and not error:
+            print(f"[VisionPipeline] Gemini Vision success: {result.get('disease')}")
+            result["model_used"] = "Gemini Vision"
+            result["status"] = "success"
+            
+            # Map Gemini response to our schema
+            return self._map_gemini_response(result, heatmap_id, outputs_dir)
+        
+        # Fallback to local YOLOv8 + EfficientNet
+        print(f"[VisionPipeline] Gemini failed: {error}. Using local ML...")
+        return self._run_local_ml(image_path, heatmap_id, outputs_dir)
+
+    def _map_gemini_response(self, gemini_result: dict, heatmap_id: str, outputs_dir: str) -> dict:
+        confidence = gemini_result.get("confidence", 0)
+        
+        # Determine severity based on confidence
+        if "healthy" in gemini_result.get("disease", "").lower():
+            severity = "None"
+            infection_pct = 0
+            urgency = "HEALTHY: No active infection detected."
+        elif confidence >= 80:
+            severity = "Severe"
+            infection_pct = 80
+            urgency = "CRITICAL: Immediate action required."
+        elif confidence >= 50:
+            severity = "Moderate"
+            infection_pct = 45
+            urgency = "WARNING: Apply remedies within 48 hours."
+        else:
+            severity = "Mild"
+            infection_pct = 15
+            urgency = "NOTICE: Early infection signs. Monitor daily."
+
+        return {
+            "status": "success",
+            "plant": gemini_result.get("plant", "Unknown Plant"),
+            "crop": gemini_result.get("plant", "Unknown Plant"),
+            "disease": gemini_result.get("disease", "Unknown Disease"),
+            "severity": severity,
+            "confidence": confidence,
+            "top_3": gemini_result.get("top_3", []),
+            "symptoms": gemini_result.get("symptoms", "No symptoms data."),
+            "reasoning": gemini_result.get("symptoms", ""),
+            "remedies": gemini_result.get("advice", "No treatment advice available."),
+            "fertilizer": gemini_result.get("fertilizer", "No fertilizer advice available."),
+            "precautions": "Follow agricultural best practices.",
+            "preventions": "Regular monitoring and preventive measures recommended.",
+            "infection_percentage": infection_pct,
+            "damage_percentage": infection_pct,
+            "urgency_warning": urgency,
+            "model_used": "Gemini Vision",
+            "heatmap_url": None
+        }
+
+    def _run_local_ml(self, image_path: str, heatmap_id: str, outputs_dir: str):
+        """Fallback to YOLOv8 + EfficientNet"""
         try:
-            # Set model attribute for Grad-CAM compatibility
+            from ml_core.yolo_efficientnet_pipeline import YoloEfficientNetPipeline
+            
+            yolo_path = os.path.join(PROJECT_ROOT, "models", "yolov8n.pt")
+            efficientnet_path = os.path.join(PROJECT_ROOT, "models", "efficientnet_leaf_disease.pth")
+            class_map_path = os.path.join(PROJECT_ROOT, "models", "class_indices.json")
+
+            self.analyzer = YoloEfficientNetPipeline(
+                yolo_model_path=yolo_path,
+                efficientnet_path=efficientnet_path,
+                class_map_path=class_map_path
+            )
+
+            output_overlay_path = os.path.join(outputs_dir, f"heatmap_{heatmap_id}.png")
             self.analyzer.model = self.analyzer.classifier
             
-            # Generate actual Grad-CAM heatmap overlay
             from utils.heatmap_generator import create_heatmap_overlay
             create_heatmap_overlay(image_path, self.analyzer, output_overlay_path)
             
-            # Run YOLO + EfficientNet classification analysis
             result = self.analyzer.analyze(image_path, output_overlay_path=None)
             
-            # Hook the heatmap overlay to heatmap_url
             if os.path.exists(output_overlay_path):
                 result["heatmap_url"] = f"/outputs/heatmap_{heatmap_id}.png"
-            else:
-                result["heatmap_url"] = None
-
+            
+            result["model_used"] = "YOLOv8 + EfficientNet (Fallback)"
+            return result
+            
         except Exception as e:
-            print(f"[VisionPipeline] Analyzer exception: {e}")
-            result = {
+            print(f"[VisionPipeline] Local ML also failed: {e}")
+            return {
                 "status": "error",
                 "plant": "Unknown Plant",
                 "crop": "Unknown Plant",
                 "disease": "Unknown Disease",
                 "severity": "Unknown",
                 "confidence": 0,
-                "symptoms": f"Analysis failed: {str(e)}",
-                "reasoning": f"Analysis failed: {str(e)}",
-                "remedies": "Please retry with a clearer plant image.",
+                "symptoms": "Analysis failed - please check API keys and try again.",
+                "remedies": "Unable to generate advice.",
                 "fertilizer": "Unable to generate advice.",
-                "precautions": "Ensure deep learning dependencies are fully installed.",
-                "preventions": "Make sure models are saved in the models directory.",
+                "precautions": "Ensure Gemini API key is valid.",
+                "preventions": "Check backend logs for errors.",
                 "infection_percentage": 0,
                 "damage_percentage": 0,
-                "urgency_warning": "Analysis failed — please retry.",
-                "model_used": "YOLOv8 + EfficientNet",
+                "urgency_warning": "Analysis failed.",
+                "model_used": "None",
                 "heatmap_url": None
             }
-
-        # Double check fallback keys
-        result.setdefault("plant", result.get("crop", "Unknown Plant"))
-        result.setdefault("crop", result.get("plant", "Unknown Plant"))
-        result.setdefault("disease", "Unknown Disease")
-        result.setdefault("severity", "Unknown")
-        result.setdefault("confidence", 0)
-        result.setdefault("symptoms", "No symptoms data available.")
-        result.setdefault("reasoning", result.get("symptoms", ""))
-        result.setdefault("remedies", "No treatment advice available.")
-        result.setdefault("fertilizer", "No fertilizer advice available.")
-        result.setdefault("precautions", "No precautions available.")
-        result.setdefault("preventions", "No prevention steps available.")
-        result.setdefault("infection_percentage", 0)
-        result.setdefault("damage_percentage", result.get("infection_percentage", 0))
-        result.setdefault("urgency_warning", "")
-        result.setdefault("status", "success")
-
-        return result
-

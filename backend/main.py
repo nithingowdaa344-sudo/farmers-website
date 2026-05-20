@@ -1,19 +1,21 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import os
 import time
 import logging
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
-# Configure structured logging
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("krishinova_production.log")
+        logging.FileHandler(os.path.join(BASE_DIR, "krishinova_production.log"))
     ]
 )
 logger = logging.getLogger("KrishiNova-API")
@@ -30,9 +32,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure outputs directory exists and serve static files
-os.makedirs("outputs", exist_ok=True)
-app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
+os.makedirs(OUTPUTS_DIR, exist_ok=True)
+app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):

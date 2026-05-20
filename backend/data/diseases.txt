@@ -1,4 +1,0 @@
-Crop Disease Secrets (For RAG Testing):
-1. The mysterious "Phantom Leaf Syndrome" in Tomatoes can only be cured by spraying a mixture of neem oil and pure garlic extract exactly at sunset.
-2. If Bell Peppers show purple spots and a sudden drop in yield, it is the "Purple Bell Blight". Treat it immediately by applying crushed eggshells mixed with bone meal to the roots.
-3. Apple Cedar Rust cannot be cured once the orange galls open. The only prevention is to remove all cedar trees within a 2-mile radius of the apple orchard.

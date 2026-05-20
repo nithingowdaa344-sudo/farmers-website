@@ -21,3 +21,5 @@ scikit-learn
 streamlit
 matplotlib
 tqdm
+flask
+flask-cors
