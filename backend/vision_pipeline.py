@@ -19,7 +19,10 @@ class VisionPipeline:
 
         heatmap_id = uuid.uuid4().hex
         outputs_dir = os.path.join(BASE_DIR, "outputs")
-        os.makedirs(outputs_dir, exist_ok=True)
+        try:
+            os.makedirs(outputs_dir, exist_ok=True)
+        except OSError:
+            outputs_dir = None
 
         result, error = get_gemini_vision_analysis(image_path)
 

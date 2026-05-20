@@ -1,8 +1,7 @@
 import os
-import uuid
 import shutil
 import logging
-import traceback
+import tempfile
 import asyncio
 from datetime import datetime
 from PIL import Image
@@ -76,10 +75,11 @@ async def analyze(file: UploadFile = File(...)):
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Invalid file type")
 
-    temp_path = f"temp_analyze_{uuid.uuid4().hex}.jpg"
+    temp_path = None
     try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+            temp_path = tmp.name
+            shutil.copyfileobj(file.file, tmp)
 
         validate_image_file(temp_path)
 
@@ -109,7 +109,7 @@ async def analyze(file: UploadFile = File(...)):
         logger.error(f"POST /analyze error: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
     finally:
-        if os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             try:
                 os.remove(temp_path)
             except:
