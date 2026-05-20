@@ -13,10 +13,7 @@ OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(os.path.join(BASE_DIR, "krishinova_production.log"))
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("KrishiNova-API")
 
@@ -32,8 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-os.makedirs(OUTPUTS_DIR, exist_ok=True)
-app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
+try:
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
+except Exception:
+    logger.warning("Static outputs directory not available (read-only filesystem)")
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
