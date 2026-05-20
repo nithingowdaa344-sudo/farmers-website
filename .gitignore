@@ -19,7 +19,7 @@ Thumbs.db
 .vscode/
 
 # Temporary Files & Uploads
-backend/temp_*.jpg
+backend/*.jpg
 backend/uploads/
 backend/*.h5
 backend/*.pkl
@@ -34,3 +34,11 @@ backend/*.log
 # Uploaded test images
 backend/last_predict_image.jpg
 backend/kannada_result.txt
+
+# ML core large or temporary files
+ml_core/dummy_dataset/
+ml_core/*.jpg
+ml_core/*.png
+ml_core/*.pt
+ml_core/*.pth
+

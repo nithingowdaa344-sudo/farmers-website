@@ -1,9 +1,5 @@
 fastapi
 uvicorn
-timm
-torch
-torchvision
-opencv-python
 pillow
 requests
 python-dotenv
@@ -12,6 +8,16 @@ dnspython
 deep-translator
 langdetect
 google-generativeai
-open_clip_torch
 ollama
 python-multipart
+chromadb
+psutil
+opencv-python
+numpy
+torch
+torchvision
+ultralytics
+scikit-learn
+streamlit
+matplotlib
+tqdm

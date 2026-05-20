@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Detection from './pages/Detection';
 import LiveDetection from './pages/LiveDetection';
 import VoiceAssistant from './pages/VoiceAssistant';
+import History from './pages/History';
 import ChatBot from './components/ChatBot';
 import { motion, AnimatePresence } from 'framer-motion';
 import { translations } from './translations';
@@ -26,12 +27,7 @@ function App() {
       case 'voice':
         return <VoiceAssistant t={t} />;
       case 'history':
-        return (
-          <div className="glass-card p-12 text-center">
-            <h2 className="text-2xl font-bold text-slate-800">Prediction History</h2>
-            <p className="text-slate-500 mt-2">This feature is coming soon in the next update!</p>
-          </div>
-        );
+        return <History t={t} />;
       default:
         return <Dashboard />;
     }

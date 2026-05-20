@@ -1,139 +1,106 @@
-# Smart Crop Disease Assistant 🌿🤖
+# KrishiNova AI: Plant Leaf Disease Detection System 🌿🤖
 
-A state-of-the-art, AI-powered agricultural application designed to help farmers identify crop diseases instantly using deep learning and receive treatment advice via Generative AI.
+A production-grade, AI-powered agricultural diagnostic application designed to identify crop diseases instantly. This system uses a hybrid model pipeline: **YOLOv8** for detecting leaves in images (with real-time webcam bounding box overlays) and **EfficientNet-B0** for classifying plant diseases.
+
+---
 
 ## ✨ Features
-- **Disease Detection**: Uses MobileNetV2 (TensorFlow/Keras) trained on the PlantVillage dataset.
-- **AI Explanations**: Powered by Google Gemini API to provide farmer-friendly remedies, causes, and prevention tips.
-- **Modern UI**: Premium glassmorphism dashboard built with React and Tailwind CSS.
-- **Voice Output**: Integrated text-to-speech for disease explanations.
-- **Mobile Responsive**: Fully optimized for smartphones and tablets.
-- **Dashboard Analytics**: Visualize crop health statistics and recent activity.
+- **YOLOv8 Leaf Detection**: Identifies plant leaves and targets diseased regions inside bounding boxes.
+- **EfficientNet Classifier**: Pre-trained `efficientnet_b0` fine-tuned on the PlantVillage dataset for high-accuracy disease diagnosis.
+- **Optics Overlay**: Real-time bounding box annotations with severity color codes (Mild: Yellow, Moderate: Orange, Severe: Red, Healthy: Green).
+- **Comprehensive Remedies**: Structured advice including Symptoms, remedies, fertilizers/nutrients, precautions, and preventative measures.
+- **Dual Interfaces**:
+  - **Standalone Streamlit App**: Simple web application supporting image file upload and browser-based webcam captures.
+  - **Premium React Dashboard**: Complete dashboard with statistics, scan history, translation/i18n support, and voice assistant.
+- **Low-End GPU Friendly**: Uses lightweight architectures optimized to run quickly on CPU or low-end GPUs.
 
 ---
 
 ## 🛠️ Tech Stack
-- **Frontend**: React.js, Vite, Tailwind CSS, Framer Motion, Axios.
-- **Backend**: Flask API, TensorFlow, Keras, PIL.
-- **AI Engines**: 
-  - Image Classification: MobileNetV2 (Transfer Learning).
-  - Reasoning: Google Gemini API.
+- **AI/ML Core**: Python, PyTorch, YOLOv8 (Ultralytics), EfficientNet, OpenCV, NumPy, Scikit-Learn.
+- **Streamlit Frontend**: Single-page Python web application.
+- **Web App Frontend**: React.js, Vite, Tailwind CSS, Framer Motion.
+- **Web App Backend**: FastAPI, Uvicorn, MongoDB (history logging).
 
 ---
 
-## 🚀 Setup & Installation
+## 📂 Project Structure
+```text
+agri-club/
+├── ml_core/
+│   ├── dataset_utils.py    # Preprocessing, augmentations, & synthetic data generator
+│   ├── train.py            # Complete PyTorch training pipeline with evaluation metrics
+│   ├── yolo_efficientnet_pipeline.py  # Core YOLOv8 + EfficientNet inference pipeline
+│   ├── inference.py        # Command line diagnostic inference interface
+│   └── app_streamlit.py    # Standalone Streamlit application
+├── backend/
+│   ├── main.py             # FastAPI entrypoint
+│   ├── api/routes.py       # API endpoints (including history)
+│   ├── vision_pipeline.py  # FastAPI integration wrapper for ml_core
+│   └── requirements.txt    # Python dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── pages/          # Dashboard, History, Scanner Pages
+│   │   └── App.jsx         # React routing & core layout
+│   └── package.json        # Node.js dependencies
+└── models/                 # Stored model weights (yolov8n.pt & efficientnet_leaf_disease.pth)
+```
 
-### 1. Backend Setup
-1. Navigate to the backend directory:
+---
+
+## 🚀 Setup & Running Guide
+
+### 1. Backend & ML Setup
+Activate your python environment and install all packages in `backend/requirements.txt`:
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Run Standalone Streamlit Application
+Launch the clean, standalone web application:
+```bash
+cd ml_core
+streamlit run app_streamlit.py
+```
+
+### 3. CLI Diagnostic Inference
+To run a diagnostic check on an image directly from the terminal:
+```bash
+cd ml_core
+python inference.py --image path/to/leaf_image.jpg --output output_annotated.jpg
+```
+
+### 4. Training the Classifier Model
+To train the EfficientNet-B0 classifier on your dataset (structured with folders as classes under `dataset/train/`):
+```bash
+cd ml_core
+python train.py --data_dir path/to/dataset --epochs 10 --batch_size 16
+```
+*Note: If no custom dataset is available, you can append the `--dummy` flag to auto-generate a synthetic dataset for testing/compilation verification.*
+
+### 5. Running the Complete Stack (React + FastAPI + MongoDB)
+Ensure your MongoDB service is running locally, then:
+
+1. **Start FastAPI Backend**:
    ```bash
    cd backend
+   python -m uvicorn main:app --port 5000
    ```
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Set up environment variables:
-    - Add your Ollama Public URL (if using ngrok for live site): `OLLAMA_URL=https://your-ngrok-url.ngrok-free.app`.
-    - Add your MongoDB URI: `MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/database`.
-    - If testing locally, keep it as: `OLLAMA_URL=http://localhost:11434` and `MONGO_URI=mongodb://localhost:27017/`.
-   - Add your Gemini API Key: `GEMINI_API_KEY=your_actual_key_here`.
-
-### 🚨 Live Deployment (Ollama on Vercel)
-Since Ollama is local, you must expose it for the live Vercel site to work:
-1. Run `npx ngrok http 11434` in your terminal.
-2. Copy the `https://...` URL provided by ngrok.
-3. Update your `.env` file or Vercel Environment Variables with `OLLAMA_URL=your_ngrok_url`.
-4. Ensure your Ollama host is set to listen externally: `$env:OLLAMA_HOST="0.0.0.0"; ollama serve`.
-
-5. Train the model (or generate dummy for UI testing):
-   ```bash
-   python train.py
-   ```
-6. Start the Flask server:
-   ```bash
-   python app.py
-   ```
-
-### 🚨 Live Deployment (Vercel)
-1. **Frontend**: Set the Root Directory to `frontend`.
-2. **Environment Variables**: Add `VITE_API_URL=https://your-backend-ngrok-url.ngrok-free.app`.
-3. **Backend Tunnel**: Run `npx ngrok http 5000` to expose your Flask server.
-
-### 🚨 Production Deployment (Render)
-To make your backend work 24/7:
-1. Create a new **Web Service** on [Render](https://render.com).
-2. Connect your GitHub repo.
-3. **Root Directory**: `backend`
-4. **Build Command**: `pip install -r requirements.txt`
-5. **Start Command**: `gunicorn app:app`
-6. **Environment Variables**: 
-   - `GEMINI_API_KEY`: Your Google Gemini API Key.
-   - `PORT`: 5000
-
-Once live, copy the Render URL (e.g., `https://agri-backend.onrender.com`) and put it into Vercel's `VITE_API_URL`.
-
-### 2. Frontend Setup
-1. Navigate to the frontend directory:
+2. **Start React Frontend**:
    ```bash
    cd frontend
-   ```
-2. Install dependencies:
-   ```bash
    npm install
-   ```
-3. Start the development server:
-   ```bash
    npm run dev
    ```
 
 ---
 
-## 📸 Example API Response (`/predict`)
-```json
-{
-  "disease": "Potato Late Blight",
-  "confidence": "98.42%",
-  "advice": {
-    "explanation": "Late blight is a serious disease caused by a fungus-like organism. It causes dark spots and fuzzy growth on leaves.",
-    "remedies": [
-      "Remove and destroy infected leaves immediately.",
-      "Apply copper-based fungicides."
-    ],
-    "prevention": [
-      "Plant resistant varieties.",
-      "Ensure proper spacing for air circulation."
-    ]
-  },
-  "timestamp": "2024-05-13 15:30:00"
-}
-```
-
----
-
-## 📂 Folder Structure
-```text
-agri-club/
-├── backend/
-│   ├── app.py            # Flask API
-│   ├── train.py          # Model Training logic
-│   ├── utils.py          # Gemini & Preprocessing
-│   ├── requirements.txt  # Backend dependencies
-│   └── .env              # Environment secrets
-├── frontend/
-│   ├── src/
-│   │   ├── components/   # UI Components
-│   │   ├── pages/        # Main Pages
-│   │   ├── App.jsx       # Root Component
-│   │   └── index.css     # Tailwind & Styles
-│   ├── package.json      # Frontend dependencies
-│   └── tailwind.config.js
-└── README.md
-```
-
-## 📝 License
-Distributed under the MIT License.
+## 📊 Model Evaluation Metrics
+At the end of training, the pipeline evaluates performance on validation splits and saves metrics to `models/evaluation_metrics.json`:
+- **Accuracy**
+- **Precision (Weighted)**
+- **Recall (Weighted)**
+- **F1-score (Weighted)**
