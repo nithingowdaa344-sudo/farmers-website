@@ -75,7 +75,7 @@ const LiveDetection = ({ t }) => {
       formData.append('file', blob, 'live_frame.jpg');
 
       try {
-        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
         const res = await axios.post(`${API_BASE}/predict`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });

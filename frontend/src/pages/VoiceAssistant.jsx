@@ -63,7 +63,7 @@ const VoiceAssistant = () => {
 
     try {
       // Calling the Voice Assistant Backend (Node.js)
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
       const res = await axios.post(`${API_BASE}/chat`, { message: content });
       const aiResponse = res.data.response;
       

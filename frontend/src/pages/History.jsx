@@ -25,7 +25,7 @@ const History = ({ t }) => {
   const [sliderPos, setSliderPos] = useState(50);
   const [isZoomed, setIsZoomed] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
   useEffect(() => {
     fetchHistory();

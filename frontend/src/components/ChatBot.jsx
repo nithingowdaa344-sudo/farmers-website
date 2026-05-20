@@ -96,7 +96,7 @@ const ChatBot = ({ t }) => {
     setLoading(true);
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
       const res = await axios.post(`${API_BASE}/chat`, { message });
       setChat(prev => [...prev, { role: 'ai', content: res.data.response }]);
     } catch (err) {

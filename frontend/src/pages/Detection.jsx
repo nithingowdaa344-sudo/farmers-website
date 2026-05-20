@@ -7,7 +7,7 @@ import {
   TriangleAlert, Bot, Stethoscope, AlertTriangle
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 const Detection = ({ t }) => {
   const [selectedFile, setSelectedFile] = useState(null);
