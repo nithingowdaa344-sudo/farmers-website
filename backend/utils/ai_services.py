@@ -4,7 +4,6 @@ import json
 from dotenv import load_dotenv
 import numpy as np
 from PIL import Image
-import chromadb
 import google.generativeai as genai
 import base64
 from io import BytesIO
@@ -17,10 +16,15 @@ if API_KEY:
     genai.configure(api_key=API_KEY)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
-# Initialize ChromaDB at backend level
-CHROMA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "chroma_db")
-chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
-collection = chroma_client.get_or_create_collection(name="agri_knowledge")
+# Optional ChromaDB (for RAG) - gracefully handles when not installed
+collection = None
+try:
+    import chromadb
+    CHROMA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "chroma_db")
+    chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
+    collection = chroma_client.get_or_create_collection(name="agri_knowledge")
+except Exception:
+    pass
 
 def get_ai_explanation(disease_name):
     """
@@ -312,8 +316,9 @@ def detect_user_language(text):
 
 def get_chat_response(user_message, chat_history=None):
     """
-    Handles conversational AI for general agriculture questions using Ollama,
-    with real-time translation for Indian languages.
+    Handles conversational AI for general agriculture questions.
+    Uses Gemini API on cloud (Vercel) or Ollama if available locally.
+    Supports real-time translation for Indian languages.
     """
     if chat_history is None:
         chat_history = []
@@ -325,73 +330,79 @@ def get_chat_response(user_message, chat_history=None):
         # 2. Translate to English if needed
         english_message = user_message
         if detected_lang != 'en':
-            translator_to_en = GoogleTranslator(source=detected_lang, target='en')
-            english_message = translator_to_en.translate(user_message)
+            try:
+                translator_to_en = GoogleTranslator(source=detected_lang, target='en')
+                english_message = translator_to_en.translate(user_message)
+            except Exception:
+                pass
 
-        # 3. Retrieve Context from ChromaDB (RAG)
+        # 3. Optional RAG context from ChromaDB
         context_info = ""
-        try:
-            embed_payload = {"model": "nomic-embed-text", "prompt": english_message}
-            embed_res = requests.post("http://localhost:11434/api/embeddings", json=embed_payload)
-            if embed_res.status_code == 200:
-                query_embedding = embed_res.json()["embedding"]
-                
-                results = collection.query(query_embeddings=[query_embedding], n_results=2)
-                if results['documents'] and len(results['documents'][0]) > 0:
-                    context_info = "\n\nUSE THE FOLLOWING CONTEXT TO ANSWER IF RELEVANT:\n" + "\n".join(results['documents'][0])
-        except Exception as rag_err:
-            print(f"RAG Retrieval Error: {rag_err}")
+        if collection is not None:
+            try:
+                embed_payload = {"model": "nomic-embed-text", "prompt": english_message}
+                embed_res = requests.post("http://localhost:11434/api/embeddings", json=embed_payload)
+                if embed_res.status_code == 200:
+                    query_embedding = embed_res.json()["embedding"]
+                    results = collection.query(query_embeddings=[query_embedding], n_results=2)
+                    if results['documents'] and len(results['documents'][0]) > 0:
+                        context_info = "\n\nUSE THE FOLLOWING CONTEXT TO ANSWER IF RELEVANT:\n" + "\n".join(results['documents'][0])
+            except Exception:
+                pass
 
-        # 4. System context for the chatbot
         system_context = f"You are a helpful and knowledgeable Agriculture Assistant. Your goal is to help farmers with crop disease management, soil health, and general farming advice. Keep your answers practical, easy to follow, and concise.{context_info}"
-        
         full_prompt = f"{system_context}\n\nUser asked: {english_message}"
-        
-        # Use llama3.2 which is much lighter (2GB) and twice as fast on CPU compared to llama3 (4.7GB)
-        url = f"{OLLAMA_URL}/api/generate"
-        payload = {
-            "model": "llama3.2",
-            "prompt": full_prompt,
-            "stream": False,
-            "options": {
-                "num_predict": 250,
-                "temperature": 0.4,
-                "top_k": 30,
-                "num_ctx": 1024
-            }
-        }
-        
-        # 5. Get response
-        try:
-            # Use a longer timeout to avoid premature errors (35s)
-            response = requests.post(url, json=payload, timeout=35)
-        except requests.exceptions.Timeout:
-            # Model took too long – return a quick fallback
-            return "I’m sorry, the AI is taking longer than expected. Please try again shortly."
-        except Exception as req_err:
-            # Unexpected request error – fallback to a generic reply
-            print(f"[Chat] Ollama request error: {req_err}")
-            return "Sorry, I couldn’t process your request right now. Please try again later."
 
-        if response.status_code == 200:
-            data = response.json()
-            ai_english_response = data.get("response", "").strip()
-            if not ai_english_response:
-                # Empty response – use a safe fallback
-                return "I’m unable to generate a reply at this moment. Please try again."
-            
-            # 6. Translate response back to user's language if needed
-            if detected_lang != 'en':
-                try:
-                    translator_to_lang = GoogleTranslator(source='en', target=detected_lang)
-                    ai_response = translator_to_lang.translate(ai_english_response)
-                    return ai_response
-                except Exception as trans_err:
-                    print(f"Translation back error: {trans_err}")
+        # 4. Try Gemini first (works everywhere, including Vercel)
+        if API_KEY:
+            try:
+                model = genai.GenerativeModel('gemini-2.0-flash-lite')
+                response = model.generate_content(
+                    f"{system_context}\n\nAnswer concisely and helpfully. If the user asks in a regional language, respond in that language.\n\nUser: {english_message}"
+                )
+                ai_english_response = response.text.strip()
+                if ai_english_response:
+                    # Translate back if needed
+                    if detected_lang != 'en':
+                        try:
+                            translator_to_lang = GoogleTranslator(source='en', target=detected_lang)
+                            return translator_to_lang.translate(ai_english_response)
+                        except Exception:
+                            pass
                     return ai_english_response
-            return ai_english_response
-        else:
-            # Non‑200 – fallback message
-            return f"Chat Error: Status Code {response.status_code}"
+            except Exception as gemini_err:
+                print(f"[Chat] Gemini error: {gemini_err}")
+
+        # 5. Fallback to Ollama if Gemini unavailable
+        try:
+            url = f"{OLLAMA_URL}/api/generate"
+            payload = {
+                "model": "llama3.2",
+                "prompt": full_prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": 250,
+                    "temperature": 0.4,
+                    "top_k": 30,
+                    "num_ctx": 1024
+                }
+            }
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                ai_english_response = data.get("response", "").strip()
+                if ai_english_response:
+                    if detected_lang != 'en':
+                        try:
+                            translator_to_lang = GoogleTranslator(source='en', target=detected_lang)
+                            return translator_to_lang.translate(ai_english_response)
+                        except Exception:
+                            pass
+                    return ai_english_response
+        except Exception:
+            pass
+
+        return "Sorry, I couldn't process your request right now. Please ensure the API is configured correctly."
+
     except Exception as e:
         return f"Chat Error: {str(e)}"
