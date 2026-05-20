@@ -5,6 +5,7 @@ const Sidebar = ({ activeTab, setActiveTab, t }) => {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
     { id: 'detection', icon: Camera, label: t.detection },
+    { id: 'livescan', icon: Camera, label: t.liveScanner },
     { id: 'voice', icon: Mic, label: t.voiceAssistant },
     { id: 'history', icon: History, label: t.history },
   ];

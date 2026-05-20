@@ -52,7 +52,8 @@ export const translations = {
     issueTip: "We detected some issues. Check the remedies suggested by AI to prevent spread.",
     errorMessage: "Sorry, I'm having trouble connecting. Please check if the backend is running.",
     listen: "Listen",
-    stop: "Stop"
+    stop: "Stop",
+    liveScanner: "Live Scanner"
   },
   kn: {
     dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
@@ -107,6 +108,7 @@ export const translations = {
     issueTip: "ನಾವು ಕೆಲವು ಸಮಸ್ಯೆಗಳನ್ನು ಪತ್ತೆಹಚ್ಚಿದ್ದೇವೆ. ಹರಡುವಿಕೆಯನ್ನು ತಡೆಯಲು AI ಸೂಚಿಸಿದ ಪರಿಹಾರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
     errorMessage: "ಕ್ಷಮಿಸಿ, ಸಂಪರ್ಕದಲ್ಲಿ ತೊಂದರೆಯಾಗಿದೆ. ಸರ್ವರ್ ಚಾಲನೆಯಲ್ಲಿದೆಯೇ ಎಂದು ಪರಿಶೀಲಿಸಿ.",
     listen: "ಆಲಿಸಿ",
-    stop: "ನಿಲ್ಲಿಸಿ"
+    stop: "ನಿಲ್ಲಿಸಿ",
+    liveScanner: "ಲೈವ್ ಸ್ಕ್ಯಾನರ್"
   }
 };

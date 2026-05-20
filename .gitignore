@@ -23,3 +23,14 @@ backend/temp_*.jpg
 backend/uploads/
 backend/*.h5
 backend/*.pkl
+
+# Generated outputs (heatmaps, segmentation images)
+backend/outputs/
+
+# Log files
+backend/*.log
+*.log
+
+# Uploaded test images
+backend/last_predict_image.jpg
+backend/kannada_result.txt

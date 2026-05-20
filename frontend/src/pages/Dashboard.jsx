@@ -45,7 +45,10 @@ const Dashboard = ({ t }) => {
   }, []);
 
   const totalScans = history.length;
-  const diseasesDetected = history.filter(item => !item.disease.toLowerCase().includes('healthy')).length;
+  const diseasesDetected = history.filter(item => {
+    const diseaseName = item.disease || item.top_predictions?.[0]?.disease || 'Healthy';
+    return !diseaseName.toLowerCase().includes('healthy');
+  }).length;
   const healthyCount = totalScans - diseasesDetected;
   const healthRate = totalScans > 0 ? ((healthyCount / totalScans) * 100).toFixed(1) : "0";
 
@@ -99,20 +102,25 @@ const Dashboard = ({ t }) => {
           <h3 className="text-lg font-bold text-slate-800 mb-6">{t.recentActivity}</h3>
           <div className="space-y-6">
             {history.length > 0 ? (
-              history.slice(0, 5).map((item, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${item.disease.toLowerCase().includes('healthy') ? 'bg-green-100' : 'bg-red-100'}`}>
-                    <Leaf className={`${item.disease.toLowerCase().includes('healthy') ? 'text-green-600' : 'text-red-600'} w-6 h-6`} />
+              history.slice(0, 5).map((item, i) => {
+                const diseaseName = item.disease || item.top_predictions?.[0]?.disease || 'Healthy';
+                const confidence = item.confidence || item.top_predictions?.[0]?.confidence || 100;
+                const isHealthy = diseaseName.toLowerCase().includes('healthy');
+                return (
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isHealthy ? 'bg-green-100' : 'bg-red-100'}`}>
+                      <Leaf className={`${isHealthy ? 'text-green-600' : 'text-red-600'} w-6 h-6`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-800 text-sm">{diseaseName}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{t.confidence} {confidence}% • {item.timestamp}</p>
+                    </div>
+                    <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${isHealthy ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                      {isHealthy ? t.healthy : t.diseased}
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-800 text-sm">{item.disease}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{t.confidence} {item.confidence} • {item.timestamp}</p>
-                  </div>
-                  <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${item.disease.toLowerCase().includes('healthy') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                    {item.disease.toLowerCase().includes('healthy') ? t.healthy : t.diseased}
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">

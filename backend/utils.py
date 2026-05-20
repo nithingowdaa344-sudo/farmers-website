@@ -98,6 +98,7 @@ def get_gemini_vision_analysis(image_path):
         """
         
         response = model.generate_content([prompt, img])
+        img.close()
         text = response.text.strip()
         
         # Robust JSON cleaning
@@ -110,6 +111,8 @@ def get_gemini_vision_analysis(image_path):
             
         return None, "AI response was not in a readable format."
     except Exception as e:
+        if 'img' in locals() and hasattr(img, 'close'):
+            img.close()
         return None, f"Gemini Error: {str(e)}"
 
 def get_ollama_vision_analysis(image_path):

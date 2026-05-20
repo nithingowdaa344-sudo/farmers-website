@@ -73,7 +73,10 @@ def predict():
         return jsonify({"error": str(e)}), 500
     finally:
         if os.path.exists(temp_path):
-            os.remove(temp_path)
+            try:
+                os.remove(temp_path)
+            except Exception as e:
+                print(f"Cleanup warning: Could not remove temp file: {e}")
 
 @app.route('/history', methods=['GET'])
 def get_history():

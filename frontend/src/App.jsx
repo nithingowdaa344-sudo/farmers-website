@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Detection from './pages/Detection';
+import LiveDetection from './pages/LiveDetection';
 import VoiceAssistant from './pages/VoiceAssistant';
 import ChatBot from './components/ChatBot';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +21,8 @@ function App() {
         return <Dashboard t={t} />;
       case 'detection':
         return <Detection t={t} />;
+      case 'livescan':
+        return <LiveDetection t={t} />;
       case 'voice':
         return <VoiceAssistant t={t} />;
       case 'history':
