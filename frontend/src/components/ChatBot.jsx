@@ -12,6 +12,7 @@ const ChatBot = ({ t }) => {
   ]);
   const [loading, setLoading] = useState(false);
   const [playingIndex, setPlayingIndex] = useState(null);
+  const [muted, setMuted] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speechLang, setSpeechLang] = useState('kn'); // 'kn' for Kannada, 'en' for English
   const messagesEndRef = useRef(null);
@@ -56,7 +57,15 @@ const ChatBot = ({ t }) => {
     scrollToBottom();
   }, [chat]);
 
+  const toggleMute = () => {
+    setMuted(prev => {
+      if (!prev) window.speechSynthesis.cancel();
+      return !prev;
+    });
+  };
+
   const handleListen = (text, index) => {
+    if (muted) return;
     if ('speechSynthesis' in window) {
       if (playingIndex === index && window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
@@ -129,7 +138,14 @@ const ChatBot = ({ t }) => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={toggleMute}
+                  className={`p-1.5 rounded-md transition-all ${muted ? 'bg-red-400/20 text-red-200' : 'hover:bg-white/10'}`}
+                  title={muted ? 'Unmute voice' : 'Mute voice'}
+                >
+                  {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                </button>
                 <button onClick={() => setIsMinimized(true)} className="p-1.5 hover:bg-white/10 rounded-md transition-colors">
                   <Minus size={18} />
                 </button>

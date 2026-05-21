@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Bot, User, Loader2, Languages } from 'lucide-react';
+import { Mic, MicOff, Bot, User, Loader2, Languages, Volume2, VolumeX } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const VoiceAssistant = () => {
   const [lang, setLang] = useState('kn-IN');
   const [isListening, setIsListening] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'ai', content: "ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ಕೃಷಿನೋವಾ ಧ್ವನಿ ಸಹಾಯಕ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?" }
   ]);
@@ -79,13 +80,18 @@ const VoiceAssistant = () => {
     }
   };
 
+  const toggleMute = () => {
+    setMuted(prev => {
+      if (!prev) window.speechSynthesis.cancel();
+      return !prev;
+    });
+  };
+
   const speak = (text) => {
+    if (muted) return;
     if ('speechSynthesis' in window) {
-      // Stop any active speech first
       window.speechSynthesis.cancel();
-      
       const utterance = new SpeechSynthesisUtterance(text);
-      // Auto-detect response language for realistic accents
       const hasKannada = /[\u0C80-\u0CFF]/.test(text);
       utterance.lang = hasKannada ? 'kn-IN' : 'en-US';
       window.speechSynthesis.speak(utterance);
@@ -118,34 +124,41 @@ const VoiceAssistant = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {lang === 'kn-IN' ? 'ಕೃಷಿ ಮಾಹಿತಿ ಮತ್ತು ಸಹಾಯಕ್ಕಾಗಿ ಮಾತಾಡಿ' : 'Speak to get instant agricultural solutions'}
             </p>
-          </div>
         </div>
-
+      </div>
+      <div className="flex items-center gap-2">
+          <button
+            onClick={toggleMute}
+            className={`p-2 rounded-lg transition-all ${muted ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'} hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600`}
+            title={muted ? 'Unmute voice' : 'Mute voice'}
+          >
+            {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          </button>
         {/* Dynamic Premium Language Selector */}
         <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setLang('kn-IN')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               lang === 'kn-IN'
                 ? 'bg-primary-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700'
             }`}
           >
-            ಕನ್ನಡ (KN)
+            {muted ? 'ಕನ್ನಡ' : 'Kannada'}
           </button>
           <button
             onClick={() => setLang('en-US')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               lang === 'en-US'
                 ? 'bg-primary-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700'
             }`}
           >
-            English (EN)
+            English
           </button>
         </div>
+        </div>
       </div>
-
       <div className="glass-card h-[450px] flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30 dark:bg-slate-900/10">
           <AnimatePresence initial={false}>
