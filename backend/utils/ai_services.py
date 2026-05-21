@@ -46,6 +46,8 @@ def get_gemini_vision_analysis(image_path):
 
     try:
         with Image.open(image_path) as img:
+            if img.mode == "RGBA":
+                img = img.convert("RGB")
             if max(img.size) > 1024:
                 img.thumbnail((1024, 1024))
             buffered = BytesIO()
@@ -77,7 +79,7 @@ def get_gemini_vision_analysis(image_path):
         """
 
         response = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[
                 {
                     "role": "user",
