@@ -8,20 +8,19 @@ from dotenv import load_dotenv
 from PIL import Image
 from deep_translator import GoogleTranslator
 from langdetect import detect
-from google import genai
-from google.genai import types
+from groq import Groq
 
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
+API_KEY = os.getenv("GROQ_API_KEY")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
-_gemini_client = None
+_groq_client = None
 
 def _get_client():
-    global _gemini_client
-    if _gemini_client is None and API_KEY:
-        _gemini_client = genai.Client(api_key=API_KEY)
-    return _gemini_client
+    global _groq_client
+    if _groq_client is None and API_KEY:
+        _groq_client = Groq(api_key=API_KEY)
+    return _groq_client
 
 def get_ai_explanation(disease_name):
     try:
@@ -39,14 +38,19 @@ def get_ai_explanation(disease_name):
         return f"AI Insight Error: {str(e)}"
 
 def get_gemini_vision_analysis(image_path):
+    if not API_KEY:
+        return None, "Groq API key is missing. Set GROQ_API_KEY environment variable."
     client = _get_client()
     if not client:
-        return None, "Gemini API Key missing."
+        return None, "Groq client initialization failed."
 
     try:
-        img = Image.open(image_path)
-        if max(img.size) > 1024:
-            img.thumbnail((1024, 1024))
+        with Image.open(image_path) as img:
+            if max(img.size) > 1024:
+                img.thumbnail((1024, 1024))
+            buffered = BytesIO()
+            img.save(buffered, format="JPEG")
+            img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
         prompt = """
         You are an expert agriculture disease detection AI.
@@ -72,24 +76,33 @@ def get_gemini_vision_analysis(image_path):
         }
         """
 
-        response = client.models.generate_content(
-            model='gemini-2.0-flash-lite',
-            contents=[prompt, img]
+        response = client.chat.completions.create(
+            model="llama-3.2-11b-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
+                    ]
+                }
+            ],
+            temperature=0.2,
+            max_tokens=1024
         )
-        img.close()
-        text = response.text.strip()
+
+        text = response.choices[0].message.content.strip()
 
         if "{" in text and "}" in text:
             start = text.find("{")
             end = text.rfind("}") + 1
-            result = json.loads(text[start:end])
+            json_str = text[start:end]
+            result = json.loads(json_str)
             return result, None
 
         return None, "AI response was not in a readable format."
     except Exception as e:
-        if 'img' in locals() and hasattr(img, 'close'):
-            img.close()
-        return None, f"Gemini Error: {str(e)}"
+        return None, f"Groq Vision Error: {str(e)}"
 
 def get_ollama_vision_analysis(image_path):
     try:
@@ -260,13 +273,16 @@ def get_chat_response(user_message, chat_history=None):
         client = _get_client()
         if client:
             try:
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash-lite',
-                    contents=f"{system_context}\n\nAnswer concisely and helpfully. "
-                             f"If the user asks in a regional language, respond in that language.\n\n"
-                             f"User: {english_message}"
+                response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": system_context},
+                        {"role": "user", "content": english_message}
+                    ],
+                    temperature=0.3,
+                    max_tokens=512
                 )
-                ai_response = response.text.strip()
+                ai_response = response.choices[0].message.content.strip()
                 if ai_response:
                     if detected_lang != 'en':
                         try:
@@ -275,8 +291,16 @@ def get_chat_response(user_message, chat_history=None):
                         except Exception:
                             pass
                     return ai_response
-            except Exception as gemini_err:
-                print(f"[Chat] Gemini error: {gemini_err}")
+            except Exception as groq_err:
+                print(f"[Chat] Groq error: {groq_err}")
+                err_str = str(groq_err).lower()
+                if "quota" in err_str or "rate_limit" in err_str or "429" in err_str:
+                    return "The AI service is currently over quota. Please try again later or upgrade your API plan."
+                if "api key" in err_str or "unauthorized" in err_str or "401" in err_str:
+                    return "The Groq API key is invalid. Check your GROQ_API_KEY environment variable."
+
+        if not API_KEY:
+            return "The Groq API key is missing. Set the GROQ_API_KEY environment variable and redeploy."
 
         try:
             url = f"{OLLAMA_URL}/api/generate"
@@ -301,7 +325,7 @@ def get_chat_response(user_message, chat_history=None):
         except Exception:
             pass
 
-        return "Sorry, I couldn't process your request right now. Please ensure the API is configured correctly."
+        return "Sorry, the AI assistant is unavailable. Ensure GROQ_API_KEY is set in your environment variables."
 
     except Exception as e:
         return f"Chat Error: {str(e)}"

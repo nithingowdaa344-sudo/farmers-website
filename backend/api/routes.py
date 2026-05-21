@@ -88,7 +88,7 @@ async def analyze(file: UploadFile = File(...)):
 
         pipeline_res = await asyncio.to_thread(vision_pipeline.run, temp_path)
 
-        if MONGO_AVAILABLE and history_collection:
+        if MONGO_AVAILABLE and history_collection is not None:
             try:
                 db_record = pipeline_res.copy()
                 db_record["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

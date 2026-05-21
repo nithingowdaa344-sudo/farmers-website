@@ -7,6 +7,6 @@ pymongo
 dnspython
 deep-translator
 langdetect
-google-genai
+groq
 python-multipart
 numpy
